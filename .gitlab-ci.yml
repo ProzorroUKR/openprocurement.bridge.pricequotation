@@ -6,6 +6,9 @@ docker build:
   stage: push image
   only:
     - tags
+  before_script:
+    - apk add gettext
+    - envsubst < Dockerfile_template > Dockerfile
   script:
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
     - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG $EXTRA_TAGS .
