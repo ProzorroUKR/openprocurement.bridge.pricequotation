@@ -1,18 +1,11 @@
-FROM python:2.7-slim-jessie
+FROM prozorro/base
 
-RUN apt-get update && apt-get install -y libsodium-dev git libevent-dev libzmq-dev libffi-dev libssl-dev gcc file
-WORKDIR /opt/bridge
-COPY . /opt/bridge
-RUN pip install --upgrade pip && pip install -r requirements-dev.txt
-RUN pip install -e .
-RUN pwd && ls -lah
-RUN apt-get clean
+COPY requirements /app/requirements
 
-ENV TZ=Europe/Kiev
-ENV LANG="en_US.UTF-8"
-ENV LC_ALL="en_US.UTF-8"
-ENV LC_LANG="en_US.UTF-8"
-ENV PYTHONIOENCODING="UTF-8"
-ENV PYTHONPATH="/opt/bridge/:${PYTHONPATH}"
+WORKDIR /app
+RUN virtualenv --clear --never-download . && ./bin/pip install --upgrade pip && ./bin/pip install -r requirements/base.txt
 
-CMD ["/usr/local/bin/databridge", "/etc/databridge.yaml"]
+COPY src /app/src
+RUN ./bin/pip install -r requirements/app.txt
+
+CMD ["bin/databridge", "etc/pq_data_bridge.yaml"]
