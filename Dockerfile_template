@@ -1,11 +1,12 @@
 FROM prozorro/base
 
-COPY requirements /app/requirements
-
 WORKDIR /app
-RUN virtualenv --clear --never-download . && ./bin/pip install --upgrade pip && ./bin/pip install -r requirements/base.txt
 
-COPY src /app/src
-RUN ./bin/pip install -r requirements/app.txt
+COPY . /app
+
+RUN pip install --upgrade pip && pip install -r requirements-dev.txt
+RUN pip install -e .
+RUN ls -lah
+RUN apt-get clean
 
 CMD ["bin/databridge", "etc/pq_data_bridge.yaml"]
