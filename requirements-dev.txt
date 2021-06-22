@@ -1,5 +1,5 @@
 git+https://github.com/ProzorroUKR/openprocurement.bridge.basic.git
-git+https://github.com/ProzorroUKR/openprocurement.client.python.git
+git+https://github.com/ProzorroUKR/openprocurement.client.python.git@2.1.1dp
 futurist==1.2.0
 munch==2.5.0
 pytest==4.6.9
