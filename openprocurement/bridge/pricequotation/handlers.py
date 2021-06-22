@@ -9,6 +9,7 @@ from tooz import coordination
 
 from openprocurement_client.exceptions import RequestFailed, ResourceGone, ResourceNotFound, UnprocessableEntity
 from openprocurement_client.resources.ecatalogues import ECataloguesClient
+from openprocurement_client.resources.agreements import AgreementClient
 
 config = {
     "worker_type": "contracting",
@@ -66,9 +67,14 @@ class PQSecondPhaseCommit(HandlerTemplate):
 
     def initialize_clients(self):
         self.tender_client = self.create_api_client()
+
         self.catalogues_client = ECataloguesClient(host_url=self.handler_config.get("catalogue_api_server"),
                                                    api_version=self.handler_config.get("catalogue_api_version"),
                                                    user_agent="priceQuotationBot")
+
+        self.agreement_client = AgreementClient(host_url=self.handler_config['output_resources_api_server'],
+                                                user_agent="priceQuotationBot",
+                                                api_version=self.handler_config['resources_api_version'],)
 
     def decline_resource(self, resource, reason):
         status = "draft.unsuccessful"
@@ -105,14 +111,39 @@ class PQSecondPhaseCommit(HandlerTemplate):
                 self.decline_resource(resource, reason)
                 return
 
+            classification_id = profile.data.classification.id
+            additional_classifications = profile.data.get("additionalClassifications", "")
+            additional_classifications_ids = (
+                [i.id for i in additional_classifications]
+                if additional_classifications
+                else ["none"]
+            )
 
-            suppliers = self.catalogues_client.categories.get_category_suppliers(profile.data.relatedCategory)
-            shortlisted_firms = [sf for sf in suppliers.data if sf.status == "active"]
-            if len(shortlisted_firms) == 0:
+            agreements = self.agreement_client.find_recursive_agreements_by_classification_id(
+                profile.data.classification.id, additional_classifications=additional_classifications_ids)
+
+            if not agreements:
+                logger.error(
+                    "There are no any active agreement for classification: {} or for levels higher".format(classification_id)
+                )
+                reason = u"Для обраного профілю немає активних реєстрів"
+                self.decline_resource(resource, reason)
+                return
+
+            shortlisted_firms = {
+                contract.suppliers[0].identifier.id: contract.suppliers[0]
+                for agreement in agreements
+                for contract in agreement.contracts
+                if contract.status == "active"
+            }
+
+            shortlisted_firms = shortlisted_firms.values()
+
+            if not shortlisted_firms:
                 logger.error(
                     "This category {} doesn`t have qualified suppliers".format(profile.data.relatedCategory)
                 )
-                reason = u"В обраному профілі немає активних постачальників"
+                reason = u"В обраних реєстрах немає активних постачальників"
                 self.decline_resource(resource, reason)
                 return
 
