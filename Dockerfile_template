@@ -1,12 +1,11 @@
 FROM python:2.7-slim-jessie
 
 RUN apt-get update && apt-get install -y libsodium-dev git libevent-dev libzmq-dev libffi-dev libssl-dev gcc file
-RUN echo "machine gitlab.quintagroup.com login ${TOKEN_NAME}  password ${D_TOKEN}" > ~/.netrc
 WORKDIR /opt/bridge
 COPY . /opt/bridge
 RUN pip install --upgrade pip && pip install -r requirements-dev.txt
 RUN pip install -e .
-RUN apt-get clean && rm ~/.netrc
+RUN apt-get clean
 
 ENV TZ=Europe/Kiev
 ENV LANG="en_US.UTF-8"
