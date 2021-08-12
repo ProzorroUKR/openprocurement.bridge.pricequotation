@@ -103,6 +103,14 @@ class PQSecondPhaseCommit(HandlerTemplate):
                 self.decline_resource(resource, reason)
                 return
 
+            if profile.data.status == "general":
+                logger.error("Pofile {} status '{}' is not available for publication, tender {}".format(profile.data.id,
+                                                                                          profile.data.status,
+                                                                                          resource["id"]))
+                reason = u"Обраний профіль (загальний) недоступний для публікації закупівлі \"Запит ціни пропозиції\" в Prozorro.Market"
+                self.decline_resource(resource, reason)
+                return
+
             if profile.data.status != "active":
                 logger.error("Pofile {} status '{}' not equal 'active', tender {}".format(profile.data.id,
                                                                                           profile.data.status,
