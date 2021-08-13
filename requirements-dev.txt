@@ -6,3 +6,4 @@ pytest==4.6.9
 pytest-cov==2.8.1
 pytest-mock==2.0.0
 python-json-logger==0.1.11
+gevent==1.2.2
