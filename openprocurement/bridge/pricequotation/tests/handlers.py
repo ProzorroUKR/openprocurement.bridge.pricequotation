@@ -58,9 +58,10 @@ class TestPQSecondPhaseCommit(unittest.TestCase):
 
     @patch('openprocurement.bridge.pricequotation.handlers.coordination')
     @patch('openprocurement.bridge.pricequotation.handlers.ECataloguesClient')
+    @patch('openprocurement.bridge.pricequotation.handlers.AgreementClient')
     @patch('openprocurement.bridge.basic.handlers.APIClient')
     @patch('openprocurement.bridge.pricequotation.handlers.logger')
-    def test_process_resource(self, logger, tender_client, ecatalogue_client, mocked_coordination):
+    def test_process_resource(self, logger, tender_client, ecatalogue_client, agreement_client, mocked_coordination):
         lock = MagicMock()
         lock._client.exists.return_value = True
 
@@ -111,6 +112,25 @@ class TestPQSecondPhaseCommit(unittest.TestCase):
 
         handler.process_resource(resource.data)
         reason = u"Обраний профіль неактивний в системі Prozorro.Market"
+        self.assertEquals(len(handler.tender_client.patch_resource_item.mock_calls), 1)
+        self.assertEquals(
+            handler.tender_client.patch_resource_item.mock_calls[0],
+            call(resource.data.id, {'data': {'status': 'draft.unsuccessful', 'unsuccessfulReason': [reason]}})
+        )
+        handler.tender_client.patch_resource_item.reset_mock()
+
+        # test with empty list supplier in catalogue category
+        handler.catalogues_client.profiles.get_profile.side_effect = (munchify(deepcopy(TEST_PROFILE)),)
+        handler.catalogues_client.categories.get_category_suppliers.side_effect = \
+            (munchify({'data': [{'status': 'suspended'}]}),)
+
+        # test profile in general status
+        _profile = deepcopy(TEST_PROFILE)
+        _profile['data']['status'] = 'general'
+        handler.catalogues_client.profiles.get_profile.side_effect = (munchify(_profile),)
+
+        handler.process_resource(resource.data)
+        reason = u"Обраний профіль (загальний) недоступний для публікації закупівлі \"Запит ціни пропозиції\" в Prozorro.Market"
         self.assertEquals(len(handler.tender_client.patch_resource_item.mock_calls), 1)
         self.assertEquals(
             handler.tender_client.patch_resource_item.mock_calls[0],
